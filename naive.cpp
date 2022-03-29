@@ -12,6 +12,7 @@ Naive Bayes Classifier
 #include <cstdlib>
 #include <limits>
 #include <string>
+#include <cmath>
 #include "naive.h"
 
 //#define MAXATTR 1000
@@ -40,15 +41,92 @@ int main(int argc, char** argv)
 
   GetLabels(PlusOne, MinusOne, fin);
   ReadTrainingData(PlusOne, MinusOne, fin);
+
+  Classify Training, Testing;
+
+  Classification(Training, fin, PlusOne, MinusOne);
   fin.close();
   
-  PlusOne.Dump();
-  MinusOne.Dump();
+  fin.open(testfile);
+  if(!fin)
+  {
+    std::cerr << "\n\n***Error opening file " << testfile << "\n\n";
+    exit(EXIT_FAILURE);
+  }
+
+  Classification(Testing, fin, PlusOne, MinusOne);
+  fin.close();
+
   
+  Training.PrintResults();
+  Testing.PrintResults();
+  std::cout << "\n\n";
+
+  //  PlusOne.Dump();
+  //MinusOne.Dump();
   
   return 0;
 }
 
+void Classification(Classify& Dataset, std::ifstream& fin, Label& Pos, Label& Neg)
+{
+  fin.clear();
+  fin.seekg(0, std::ios::beg);
+  
+  std::string line, label;
+  
+  while(std::getline(fin, line))
+  {
+    std::istringstream iss(line);
+    iss >> label;
+    Predict(Dataset, iss, label, Pos, Neg);
+  }
+}
+
+void Predict(Classify& Dataset, std::istringstream& iss, std::string tru_label, Label& Pos, Label& Neg)
+{
+  std::string data_point;
+  int attribute, category;
+  double likelihood_pos, likelihood_neg;
+  likelihood_pos = likelihood_neg = 0;
+  
+  while(iss >> data_point)
+  {
+    sscanf(data_point.c_str(), "%d:%d", &attribute, &category);
+   
+    likelihood_pos += std::log(Pos.GetLikelihood(attribute, category));
+    likelihood_neg += std::log(Neg.GetLikelihood(attribute, category));
+   
+  }
+  if(likelihood_pos > likelihood_neg)
+  {
+    if(tru_label == Pos.GetLabel())
+    {
+      Dataset.TP();
+    }
+    else
+    {
+      Dataset.FP();
+    }
+  }
+  else if(likelihood_neg > likelihood_pos)
+  {
+    if(tru_label == Neg.GetLabel())
+    {
+      Dataset.TN();
+    }
+    else
+    {
+      Dataset.FN();
+    }
+  }
+  else
+  {
+    std::cout << "\nError: likelihoods equal\n";
+    std::cout << "\npositive: " << likelihood_pos
+              << "\nnegative: "	<< likelihood_neg;
+  }	      
+}
 
 void PrintInstructions()
 {
@@ -69,12 +147,12 @@ void ReadTrainingData(Label& PlusOne, Label& MinusOne, std::ifstream& fin)
     if(label == PlusOne.GetLabel())
     {
       PlusOne.AddInstance();
-      ReadData(PlusOne, iss);
+      ReadData(PlusOne, MinusOne, iss);
     }
     else if(label == MinusOne.GetLabel())
     {
       MinusOne.AddInstance();
-      ReadData(MinusOne, iss);
+      ReadData(MinusOne, PlusOne, iss);
     }
     else
     {
@@ -89,7 +167,7 @@ void ReadTrainingData(Label& PlusOne, Label& MinusOne, std::ifstream& fin)
 }
 
 
-void ReadData(Label& Label, std::istringstream& iss)
+void ReadData(Label& TheLabel, Label& Unlabel, std::istringstream& iss)
 {
   int len, i;
   std::string pair;
@@ -99,7 +177,10 @@ void ReadData(Label& Label, std::istringstream& iss)
   while(iss >> pair)
   {
     sscanf(pair.c_str(), "%d:%d", &attribute, &category);
-    Label.AddTrainingPoint(attribute, category);
+    if(TheLabel.AddTrainingPoint(attribute, category))
+    {
+      Unlabel.AddCategory(attribute, category);
+    }
   }
 }
 
@@ -121,16 +202,91 @@ void GetLabels(Label& One, Label& Two, std::ifstream& fin)
       fin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
     }
   }
-  One.AddLabel(label1);
-  Two.AddLabel(label2);
+  if(label1 == "+1" && label2 == "-1")
+  {
+    One.AddLabel(label1);
+    Two.AddLabel(label2);
+  }
+  else if(label1 == "-1" && label2 == "+1")
+  {
+    One.AddLabel(label2);
+    Two.AddLabel(label1);
+  }
+  else
+  {
+    std::cout << "\n\nExpecting labels of +1 and -1\n\n";
+  }
+	  
 }
 
+
+/*
+CLASSIFY OBJECT IMPLEMENTATIONS
+*/
+
+void Classify::PrintResults()
+{
+  std::cout << '\n'
+	    << true_positive << ' '
+	    << false_negative << ' '
+	    << false_positive << ' '
+	    << true_negative;
+}
+
+void Classify::TP()
+{
+  ++true_positive;
+}
+
+void Classify::FN()
+{
+  ++false_negative;
+}
+
+void Classify::FP()
+{
+  ++false_positive;
+}
+
+void Classify::TN()
+{
+  ++true_negative;
+}
 
 /*
 
 LABEL OBJECT IMPLEMENTATIONS
 
  */
+
+double Label::GetLikelihood (int attribute, int category)
+{
+  double return_val = 0;
+  map_itr data_itr;
+  attribute_itr attr_itr;
+  data_itr = data.find(attribute);
+  if(data_itr == data.end())
+  {
+    std::cout << "\nError! GetLikelihood for nonexistent attribute\n";
+  }
+  else
+  {
+    attr_itr = (data_itr->second).find(category);
+    if(attr_itr == (data_itr->second).end())
+    {
+      /*
+      std::cout << "\nIgnoring novel category " << category
+		<< " for attribute: " << attribute << "\n";
+      */
+    }
+    else
+    {
+      return_val = attr_itr->second;
+    }
+  }
+  //  std::cout << "\nreturning " << return_val;
+  return return_val;
+}
 
 int Label::GetTotal () const
 {
@@ -157,8 +313,9 @@ void Label::PrintLabel()
   std::cout << "\nLabel: " << label << '\n';
 }
 
-void Label::AddTrainingPoint(int attribute, int category)
+bool Label::AddTrainingPoint(int attribute, int category)
 {
+  bool added = false;
   map_itr data_itr;
   attribute_itr attr_itr;
   
@@ -168,6 +325,7 @@ void Label::AddTrainingPoint(int attribute, int category)
     std::unordered_map<int, double> new_attribute;
     new_attribute.insert(std::make_pair(category, 1));
     data.insert(std::make_pair(attribute, new_attribute));
+    added = true;
   }
   else
   {
@@ -175,14 +333,43 @@ void Label::AddTrainingPoint(int attribute, int category)
     if(attr_itr == (data_itr->second.end()))
     {
       (data_itr->second).insert(std::make_pair(category, 1));
+      added = true;
     }
     else
     {
       attr_itr->second += 1;
     }
   }
-  
+  return added;
 }
+
+void Label::AddCategory(int attribute, int category)
+{
+  map_itr data_itr;
+  attribute_itr attr_itr;
+
+  data_itr = data.find(attribute);
+  if(data_itr == data.end())
+  {
+    std::unordered_map<int, double> new_attribute;
+    new_attribute.insert(std::make_pair(category, 0));
+    data.insert(std::make_pair(attribute, new_attribute));
+  }
+  else
+  {
+    attr_itr = (data_itr->second).find(category);
+    if(attr_itr == (data_itr->second.end()))
+    {
+      (data_itr->second).insert(std::make_pair(category, 0));
+    }
+    else
+    {
+      std::cout << "\n\nError - reached else statement shouldn't have in Label::AddCategory\n";
+      exit(EXIT_FAILURE);
+    }
+  }
+}
+
 void Label::Dump()
 {
   std::cout << "\n\nData dump for label " << label << "\n\n";

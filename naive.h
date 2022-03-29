@@ -16,6 +16,7 @@ typedef std::unordered_map<int, attribute> map_attributes;
 typedef std::unordered_map<int, double>::iterator attribute_itr;
 typedef std::unordered_map<int, attribute>::iterator map_itr;
 
+
 class Label
 {
  public:
@@ -23,10 +24,12 @@ class Label
   void AddLabel(std::string);
   void PrintLabel();
   std::string GetLabel() const;
-  void AddTrainingPoint(int, int);
+  bool AddTrainingPoint(int, int);
   void Dump();
   void AddInstance();
   void AddZerosMakeFractions();
+  double GetLikelihood(int, int);
+  void AddCategory(int, int);
   
  private:
   int total_instances = 0;
@@ -35,8 +38,26 @@ class Label
   map_attributes data;
 };
 
+class Classify
+{
+public:
+  void PrintResults();
+  void TP();
+  void FN();
+  void FP();
+  void TN();
+  
+ private:
+  
+  int true_positive = 0;
+  int false_negative = 0;
+  int false_positive = 0;
+  int true_negative = 0;
+};
+
 void PrintInstructions();
 void ReadTrainingData(Label&, Label&, std::ifstream&);
 void GetLabels(Label&, Label&, std::ifstream&);
-void ReadData(Label&, std::istringstream&);
-
+void ReadData(Label&, Label&, std::istringstream&);
+void Classification(Classify&, std::ifstream&, Label&, Label&);
+void Predict(Classify&, std::istringstream&, std::string, Label&, Label&);
