@@ -15,7 +15,6 @@ Naive Bayes Classifier
 #include <cmath>
 #include "naive.h"
 
-//#define MAXATTR 1000
 
 int main(int argc, char** argv)
 {
@@ -57,7 +56,8 @@ int main(int argc, char** argv)
   Classification(Testing, fin, PlusOne, MinusOne);
   fin.close();
 
-  
+  std::cout << "\n";
+  std::cout << "\n<true_positive> <false_negative> <false_positive> <true_negative>\n";
   Training.PrintResults();
   Testing.PrintResults();
   std::cout << "\n\n";
@@ -85,19 +85,42 @@ void Classification(Classify& Dataset, std::ifstream& fin, Label& Pos, Label& Ne
 
 void Predict(Classify& Dataset, std::istringstream& iss, std::string tru_label, Label& Pos, Label& Neg)
 {
+  constexpr double lowest_double = std::numeric_limits<double>::lowest();
   std::string data_point;
   int attribute, category;
-  double likelihood_pos, likelihood_neg;
+  long double likelihood_pos, likelihood_neg, hold_pos, hold_neg;
   likelihood_pos = likelihood_neg = 0;
   
   while(iss >> data_point)
   {
     sscanf(data_point.c_str(), "%d:%d", &attribute, &category);
-   
-    likelihood_pos += std::log(Pos.GetLikelihood(attribute, category));
-    likelihood_neg += std::log(Neg.GetLikelihood(attribute, category));
-   
+
+    hold_pos = std::log(Pos.GetLikelihood(attribute, category));
+    hold_neg = std::log(Neg.GetLikelihood(attribute, category));
+
+    if(!std::isinf(hold_pos))
+    {
+      likelihood_pos += std::log(Pos.GetLikelihood(attribute, category));
+    }
+    else
+    {
+      likelihood_pos += lowest_double;
+      std::cout << "\nunderflow: " << hold_pos  << "\n";
+    }
+    
+    if(!std::isinf(hold_neg))
+    {
+      likelihood_neg += std::log(Neg.GetLikelihood(attribute, category));
+    }
+    else
+    {
+      likelihood_neg += lowest_double;
+      std::cout	<< "\nunderflow: " << hold_neg << "\n";
+    }
   }
+  likelihood_pos += std::log(Pos.GetOverallProbability());
+  likelihood_neg += std::log(Neg.GetOverallProbability());
+  
   if(likelihood_pos > likelihood_neg)
   {
     if(tru_label == Pos.GetLabel())
@@ -122,7 +145,7 @@ void Predict(Classify& Dataset, std::istringstream& iss, std::string tru_label, 
   }
   else
   {
-    std::cout << "\nError: likelihoods equal\n";
+    std::cout << "\n\nError: likelihoods equal";
     std::cout << "\npositive: " << likelihood_pos
               << "\nnegative: "	<< likelihood_neg;
   }	      
@@ -146,11 +169,13 @@ void ReadTrainingData(Label& PlusOne, Label& MinusOne, std::ifstream& fin)
     iss >> label;
     if(label == PlusOne.GetLabel())
     {
+      //      std::cout << "\n\n\nAdding instance to plus one\nLabel is " << label;
       PlusOne.AddInstance();
       ReadData(PlusOne, MinusOne, iss);
     }
     else if(label == MinusOne.GetLabel())
     {
+      //      std::cout << "\nAdding instance to minus one\nLabel is " << label;
       MinusOne.AddInstance();
       ReadData(MinusOne, PlusOne, iss);
     }
@@ -162,8 +187,32 @@ void ReadTrainingData(Label& PlusOne, Label& MinusOne, std::ifstream& fin)
       exit(EXIT_FAILURE);
     }
   }
-  PlusOne.AddZerosMakeFractions();
-  MinusOne.AddZerosMakeFractions();
+  PlusOne.Dump();
+  MinusOne.Dump();
+  
+  PlusOne.AddZeros();
+  MinusOne.AddZeros();
+
+  PlusOne.Dump();
+  MinusOne.Dump();
+
+  PlusOne.Smooth();
+  MinusOne.Smooth();
+
+  std::cout << "\n\nAFTER SMOOTHING\n\n";
+  
+  PlusOne.Dump();
+  MinusOne.Dump();
+
+  PlusOne.MakeBagofProbs();
+  MinusOne.MakeBagofProbs();
+  
+  float total = PlusOne.GetTotalInstances() + MinusOne.GetTotalInstances();
+  PlusOne.SetOverallProbability(total);
+  MinusOne.SetOverallProbability(total);
+
+  PlusOne.Dump();
+  MinusOne.Dump();
 }
 
 
@@ -181,6 +230,7 @@ void ReadData(Label& TheLabel, Label& Unlabel, std::istringstream& iss)
     {
       Unlabel.AddCategory(attribute, category);
     }
+    //    std::cout << "\nadding attribute = " << attribute << " and category = " << category;
   }
 }
 
@@ -226,6 +276,7 @@ CLASSIFY OBJECT IMPLEMENTATIONS
 
 void Classify::PrintResults()
 {
+
   std::cout << '\n'
 	    << true_positive << ' '
 	    << false_negative << ' '
@@ -284,8 +335,22 @@ double Label::GetLikelihood (int attribute, int category)
       return_val = attr_itr->second;
     }
   }
-  //  std::cout << "\nreturning " << return_val;
   return return_val;
+}
+
+void Label::SetOverallProbability(float total)
+{
+  overall_probability = total_instances / total;
+}
+
+float Label::GetOverallProbability() const
+{
+  return overall_probability;
+}
+
+int Label::GetTotalInstances() const
+{
+  return total_instances;
 }
 
 int Label::GetTotal () const
@@ -386,14 +451,13 @@ void Label::Dump()
       std::cout << "\n\t" << attr_itr->first << "\t\t" << attr_itr->second;
     }
   }
-  std::cout << "\n\n\n";
+  std::cout << "\n\n\ntotal instances are " << total_instances;
+  std::cout << "\noverall probability is " << overall_probability << "\n\n";
 }
 
-void Label::AddZerosMakeFractions()
+void Label::AddZeros()
 {
-  int difference;
   int acc;
-  double diff;
   map_itr data_itr;
   attribute_itr attr_itr;
   for(data_itr = data.begin(); data_itr != data.end(); ++data_itr)
@@ -404,13 +468,59 @@ void Label::AddZerosMakeFractions()
         ++attr_itr)
     {
       acc += attr_itr->second;
-      attr_itr->second /= total_instances;
+      //attr_itr->second /= total_instances;
     }
     if((total_instances - acc) != 0)
     {
       (data_itr->second).insert(std::make_pair(0, (total_instances - acc)));
+      /*
       attr_itr = (data_itr->second).find(0);
+      attr_itr->second /= total_instances;
+      */
+    }
+  }
+}
+
+void Label::Smooth()
+{
+  int difference;
+  int acc;
+  double diff;
+  map_itr data_itr;
+  attribute_itr attr_itr;
+  attribute_itr inner_attr_itr;
+  for(data_itr = data.begin(); data_itr != data.end(); ++data_itr)
+  {
+    for(attr_itr = (data_itr->second).begin();
+        attr_itr != (data_itr->second).end();
+        ++attr_itr)
+    {
+      if(attr_itr->second == 0)
+      {
+        for(inner_attr_itr = (data_itr->second).begin();
+            inner_attr_itr != (data_itr->second).end();
+            ++inner_attr_itr)
+	  {
+	    AddTrainingPoint(data_itr->first, inner_attr_itr->first);	    
+	  }
+      } //end if
+ 
+    } // end middle For
+  } // end outer For
+} //end Smooth
+
+void Label::MakeBagofProbs()
+{
+  map_itr data_itr;
+  attribute_itr attr_itr;
+  for(data_itr = data.begin(); data_itr != data.end(); ++data_itr)
+  {
+    for(attr_itr = (data_itr->second).begin();
+        attr_itr != (data_itr->second).end();
+        ++attr_itr)
+    {
       attr_itr->second /= total_instances;
     }
   }
 }
+

@@ -27,12 +27,18 @@ class Label
   bool AddTrainingPoint(int, int);
   void Dump();
   void AddInstance();
-  void AddZerosMakeFractions();
+  void AddZeros();
+  void Smooth();
+  void MakeBagofProbs();
   double GetLikelihood(int, int);
   void AddCategory(int, int);
+  int GetTotalInstances() const;
+  void SetOverallProbability(float);
+  float GetOverallProbability() const;
   
  private:
   int total_instances = 0;
+  float overall_probability = 0;
   std::string label;
   // in constructor  memset(attribute_count, 0, MAXATTR);
   map_attributes data;
