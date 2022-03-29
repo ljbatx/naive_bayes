@@ -87,16 +87,23 @@ void Predict(Classify& Dataset, std::istringstream& iss, std::string tru_label, 
 {
   std::string data_point;
   int attribute, category;
-  double likelihood_pos, likelihood_neg;
+  long double likelihood_pos, likelihood_neg, test;
   likelihood_pos = likelihood_neg = 0;
   
   while(iss >> data_point)
   {
     sscanf(data_point.c_str(), "%d:%d", &attribute, &category);
-   
-    likelihood_pos += std::log(Pos.GetLikelihood(attribute, category));
-    likelihood_neg += std::log(Neg.GetLikelihood(attribute, category));
-   
+    test = Pos.GetLikelihood(attribute, category);
+    if(test != 0)
+    {
+      likelihood_pos += std::log(Pos.GetLikelihood(attribute, category));
+    }
+
+    test = Neg.GetLikelihood(attribute, category);
+    if(test != 0)
+    {
+      likelihood_neg += std::log(Neg.GetLikelihood(attribute, category));
+    } 
   }
   if(likelihood_pos > likelihood_neg)
   {
@@ -284,6 +291,7 @@ double Label::GetLikelihood (int attribute, int category)
       return_val = attr_itr->second;
     }
   }
+
   //  std::cout << "\nreturning " << return_val;
   return return_val;
 }
