@@ -30,8 +30,12 @@ class Label
   void AddZerosMakeFractions();
   double GetLikelihood(int, int);
   void AddCategory(int, int);
+  void GetZeroAttributes(std::vector<int>&, std::unordered_map<int, int>&);
+  int GetMaxAttributes();
+
   
  private:
+  int max_attributes = 0;
   int total_instances = 0;
   std::string label;
   // in constructor  memset(attribute_count, 0, MAXATTR);

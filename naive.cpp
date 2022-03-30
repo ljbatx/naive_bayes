@@ -57,13 +57,12 @@ int main(int argc, char** argv)
   Classification(Testing, fin, PlusOne, MinusOne);
   fin.close();
 
+  // PlusOne.Dump();                      
+  // MinusOne.Dump();
   
   Training.PrintResults();
   Testing.PrintResults();
   std::cout << "\n\n";
-
-  //  PlusOne.Dump();
-  //MinusOne.Dump();
   
   return 0;
 }
@@ -85,26 +84,33 @@ void Classification(Classify& Dataset, std::ifstream& fin, Label& Pos, Label& Ne
 
 void Predict(Classify& Dataset, std::istringstream& iss, std::string tru_label, Label& Pos, Label& Neg)
 {
+  std::vector<int> zero_attributes;
+  std::unordered_map<int, int> attributes_accounted_for;
   std::string data_point;
-  int attribute, category;
+  int attribute, category, max, item;
   long double likelihood_pos, likelihood_neg, test;
   likelihood_pos = likelihood_neg = 0;
   
   while(iss >> data_point)
   {
     sscanf(data_point.c_str(), "%d:%d", &attribute, &category);
-    test = Pos.GetLikelihood(attribute, category);
-    if(test != 0)
-    {
-      likelihood_pos += std::log(Pos.GetLikelihood(attribute, category));
-    }
-
-    test = Neg.GetLikelihood(attribute, category);
-    if(test != 0)
-    {
-      likelihood_neg += std::log(Neg.GetLikelihood(attribute, category));
-    } 
+    attributes_accounted_for.insert(std::make_pair(attribute, category));
+    
+    likelihood_pos += Pos.GetLikelihood(attribute, category);
+    likelihood_neg += Neg.GetLikelihood(attribute, category);
   }
+  
+  if(Pos.GetMaxAttributes() > attributes_accounted_for.size())
+  {
+    Pos.GetZeroAttributes(zero_attributes, attributes_accounted_for);
+    max = zero_attributes.size();  
+    for(int i = 0; i < max; ++i)
+    {
+      likelihood_pos += Pos.GetLikelihood(zero_attributes[i], 0);
+      likelihood_neg += Neg.GetLikelihood(zero_attributes[i], 0);
+    }
+  }
+  
   if(likelihood_pos > likelihood_neg)
   {
     if(tru_label == Pos.GetLabel())
@@ -311,6 +317,11 @@ void Label::AddLabel (std::string name)
   label = name;
 }
 
+int Label::GetMaxAttributes ()
+{
+  return max_attributes;
+}
+
 void Label::AddInstance ()
 {
   ++total_instances;
@@ -386,7 +397,7 @@ void Label::Dump()
   for(data_itr = data.begin(); data_itr != data.end(); ++data_itr)
   {
     std::cout << "\n\nattribute index: " << data_itr->first
-	      << "\n\n\tcategory\tcount";
+	      << "\n\n\tcategory\tvalue";
     for(attr_itr = (data_itr->second).begin();
 	attr_itr != (data_itr->second).end();
 	++attr_itr)
@@ -413,12 +424,34 @@ void Label::AddZerosMakeFractions()
     {
       acc += attr_itr->second;
       attr_itr->second /= total_instances;
+      if(attr_itr->second != 0)
+        attr_itr->second = std::log(attr_itr->second);
     }
     if((total_instances - acc) != 0)
     {
       (data_itr->second).insert(std::make_pair(0, (total_instances - acc)));
       attr_itr = (data_itr->second).find(0);
       attr_itr->second /= total_instances;
+      if(attr_itr->second != 0)
+        attr_itr->second = std::log(attr_itr->second);
+    }
+  }
+  max_attributes = data.size();
+}
+
+void Label::GetZeroAttributes(std::vector<int>& zeros, std::unordered_map<int, int>& used)
+{
+  map_itr data_itr;
+  attribute_itr attr_itr;
+  std::unordered_map<int, int>::iterator used_itr;
+  
+  for(data_itr = data.begin(); data_itr != data.end(); ++data_itr)
+  {
+    used_itr = used.find(data_itr->first);
+    if(used_itr == used.end())
+    {
+      zeros.push_back(data_itr->first);
     }
   }
 }
+
