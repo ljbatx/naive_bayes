@@ -58,7 +58,7 @@ int main(int argc, char** argv)
   fin.close();
 
   // PlusOne.Dump();                      
-  // MinusOne.Dump();
+  //MinusOne.Dump();
   
   Training.PrintResults();
   Testing.PrintResults();
@@ -89,7 +89,9 @@ void Predict(Classify& Dataset, std::istringstream& iss, std::string tru_label, 
   std::string data_point;
   int attribute, category, max, item;
   long double likelihood_pos, likelihood_neg, test;
-  likelihood_pos = likelihood_neg = 0;
+  likelihood_pos = Pos.GetLogProb();
+  likelihood_neg = Neg.GetLogProb();
+ 
   
   while(iss >> data_point)
   {
@@ -135,9 +137,11 @@ void Predict(Classify& Dataset, std::istringstream& iss, std::string tru_label, 
   }
   else
   {
+    /*
     std::cout << "\nError: likelihoods equal\n";
     std::cout << "\npositive: " << likelihood_pos
               << "\nnegative: "	<< likelihood_neg;
+    */
   }	      
 }
 
@@ -152,7 +156,8 @@ void ReadTrainingData(Label& PlusOne, Label& MinusOne, std::ifstream& fin)
 {
   fin.seekg(0, std::ios::beg);
   std::string line, label;
-
+  long double total;
+  
   while(std::getline(fin, line))
   {
     std::istringstream iss(line);
@@ -177,6 +182,9 @@ void ReadTrainingData(Label& PlusOne, Label& MinusOne, std::ifstream& fin)
   }
   PlusOne.AddZerosMakeFractions();
   MinusOne.AddZerosMakeFractions();
+  total = PlusOne.GetTotal() + MinusOne.GetTotal();
+  PlusOne.SetLogProb(total);
+  MinusOne.SetLogProb(total);
 }
 
 
@@ -312,6 +320,11 @@ std::string Label::GetLabel () const
   return label;
 }
 
+long double Label::GetLogProb() const
+{
+  return log_prob;
+}
+
 void Label::AddLabel (std::string name)
 {
   label = name;
@@ -330,6 +343,12 @@ void Label::AddInstance ()
 void Label::PrintLabel()
 {
   std::cout << "\nLabel: " << label << '\n';
+}
+
+void Label::SetLogProb(long double total)
+{
+  log_prob = total_instances / total;
+  log_prob = std::log(log_prob);
 }
 
 bool Label::AddTrainingPoint(int attribute, int category)
@@ -405,7 +424,11 @@ void Label::Dump()
       std::cout << "\n\t" << attr_itr->first << "\t\t" << attr_itr->second;
     }
   }
-  std::cout << "\n\n\n";
+  std::cout << "\n\nmax_attributes = " << max_attributes
+	    << "\ntotal_instances = " << total_instances
+	    << "\nlog_prob = " << log_prob;
+
+    std::cout << "\n\n";
 }
 
 void Label::AddZerosMakeFractions()

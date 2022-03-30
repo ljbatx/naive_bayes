@@ -32,13 +32,14 @@ class Label
   void AddCategory(int, int);
   void GetZeroAttributes(std::vector<int>&, std::unordered_map<int, int>&);
   int GetMaxAttributes();
-
+  long double GetLogProb() const;
+  void SetLogProb(long double);
   
  private:
   int max_attributes = 0;
   int total_instances = 0;
   std::string label;
-  // in constructor  memset(attribute_count, 0, MAXATTR);
+  long double log_prob = 0;
   map_attributes data;
 };
 
