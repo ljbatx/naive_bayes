@@ -15,4 +15,4 @@ NaiveBayes: naive.cpp naive.h
 .PHONY: clean
 
 clean:
-	rm -rf *.o core.* a.out *~ \#*\# *.dSYM
+	rm -rf *.o core.* a.out *~ \#*\# *.dSYM NaiveBayes

@@ -57,8 +57,8 @@ int main(int argc, char** argv)
   Classification(Testing, fin, PlusOne, MinusOne);
   fin.close();
 
-  // PlusOne.Dump();                      
-  //MinusOne.Dump();
+  PlusOne.Dump();                      
+  MinusOne.Dump();
   
   Training.PrintResults();
   Testing.PrintResults();
@@ -91,8 +91,7 @@ void Predict(Classify& Dataset, std::istringstream& iss, std::string tru_label, 
   long double likelihood_pos, likelihood_neg, test;
   likelihood_pos = Pos.GetLogProb();
   likelihood_neg = Neg.GetLogProb();
- 
-  
+   
   while(iss >> data_point)
   {
     sscanf(data_point.c_str(), "%d:%d", &attribute, &category);
@@ -137,11 +136,11 @@ void Predict(Classify& Dataset, std::istringstream& iss, std::string tru_label, 
   }
   else
   {
-    /*
+    
     std::cout << "\nError: likelihoods equal\n";
     std::cout << "\npositive: " << likelihood_pos
               << "\nnegative: "	<< likelihood_neg;
-    */
+    
   }	      
 }
 
@@ -282,6 +281,7 @@ LABEL OBJECT IMPLEMENTATIONS
 
 double Label::GetLikelihood (int attribute, int category)
 {
+  //constexpr double min_double = std::numeric_limits<double>::lowest();
   double return_val = 0;
   map_itr data_itr;
   attribute_itr attr_itr;
@@ -305,7 +305,12 @@ double Label::GetLikelihood (int attribute, int category)
       return_val = attr_itr->second;
     }
   }
-
+  /*
+  if(return_val == 0)
+  {
+    std::cout << "\nnot returning " << return_val;
+    return_val = min_double;
+    }*/
   //  std::cout << "\nreturning " << return_val;
   return return_val;
 }
@@ -433,6 +438,7 @@ void Label::Dump()
 
 void Label::AddZerosMakeFractions()
 {
+  constexpr double min_double = std::numeric_limits<double>::lowest();
   int difference;
   int acc;
   double diff;
@@ -447,16 +453,30 @@ void Label::AddZerosMakeFractions()
     {
       acc += attr_itr->second;
       attr_itr->second /= total_instances;
-      if(attr_itr->second != 0)
-        attr_itr->second = std::log(attr_itr->second);
+  
+      if((attr_itr->second) != 0)
+      {
+	attr_itr->second = std::log(attr_itr->second);
+      }
+      else
+      {
+	  attr_itr->second = std::log(min_double);
+      }
     }
     if((total_instances - acc) != 0)
     {
       (data_itr->second).insert(std::make_pair(0, (total_instances - acc)));
       attr_itr = (data_itr->second).find(0);
       attr_itr->second /= total_instances;
-      if(attr_itr->second != 0)
-        attr_itr->second = std::log(attr_itr->second);
+      
+      if((attr_itr->second) != 0)
+      {
+	attr_itr->second = std::log(attr_itr->second);
+      }
+      else
+      {
+	  attr_itr->second = std::log(min_double);
+      }
     }
   }
   max_attributes = data.size();
