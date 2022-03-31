@@ -96,21 +96,39 @@ void Predict(Classify& Dataset, std::istringstream& iss, std::string tru_label, 
   {
     sscanf(data_point.c_str(), "%d:%d", &attribute, &category);
     attributes_accounted_for.insert(std::make_pair(attribute, category));
+    test = Neg.GetLikelihood(attribute, category);
+    if(test == 0)
+    {
+      likelihood_neg = 0;
+      break;
+    }
+    else
+      likelihood_neg *= test;
+
+    test = Pos.GetLikelihood(attribute, category);
     
-    likelihood_pos += Pos.GetLikelihood(attribute, category);
-    likelihood_neg += Neg.GetLikelihood(attribute, category);
+    if(test == 0)
+    {
+      likelihood_pos = 0;
+      break;
+    }
+    else
+    {
+      likelihood_pos *= test;
+    }
   }
-  
+  /*  
   if(Pos.GetMaxAttributes() > attributes_accounted_for.size())
   {
     Pos.GetZeroAttributes(zero_attributes, attributes_accounted_for);
     max = zero_attributes.size();  
     for(int i = 0; i < max; ++i)
     {
-      likelihood_pos += Pos.GetLikelihood(zero_attributes[i], 0);
-      likelihood_neg += Neg.GetLikelihood(zero_attributes[i], 0);
+      likelihood_pos *= Pos.GetLikelihood(zero_attributes[i], 0);
+      likelihood_neg *= Neg.GetLikelihood(zero_attributes[i], 0);
     }
   }
+  */
   
   if(likelihood_pos > likelihood_neg)
   {
@@ -353,7 +371,7 @@ void Label::PrintLabel()
 void Label::SetLogProb(long double total)
 {
   log_prob = total_instances / total;
-  log_prob = std::log(log_prob);
+  //log_prob = std::log(log_prob);
 }
 
 bool Label::AddTrainingPoint(int attribute, int category)
@@ -453,7 +471,7 @@ void Label::AddZerosMakeFractions()
     {
       acc += attr_itr->second;
       attr_itr->second /= total_instances;
-  
+      /*
       if((attr_itr->second) != 0)
       {
 	attr_itr->second = std::log(attr_itr->second);
@@ -462,13 +480,14 @@ void Label::AddZerosMakeFractions()
       {
 	  attr_itr->second = std::log(min_double);
       }
+      */
     }
     if((total_instances - acc) != 0)
     {
       (data_itr->second).insert(std::make_pair(0, (total_instances - acc)));
       attr_itr = (data_itr->second).find(0);
       attr_itr->second /= total_instances;
-      
+      /*
       if((attr_itr->second) != 0)
       {
 	attr_itr->second = std::log(attr_itr->second);
@@ -477,7 +496,9 @@ void Label::AddZerosMakeFractions()
       {
 	  attr_itr->second = std::log(min_double);
       }
+      */
     }
+      
   }
   max_attributes = data.size();
 }
