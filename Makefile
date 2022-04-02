@@ -5,7 +5,7 @@
 #Naive Bayes Classifier
 
 CXX= g++
-CXXFLAGS= -std=c++11 -Wall -pedantic -g
+CXXFLAGS= -std=c++11 -Wall -pedantic
 
 all: clean NaiveBayes NaiveBayes2
 
@@ -18,4 +18,4 @@ NaiveBayes2: matchingnaive.cpp naive.h
 .PHONY: clean
 
 clean:
-	rm -rf *.o core.* a.out *~ \#*\# *.dSYM NaiveBayes
+	rm -rf *.o core.* a.out *~ \#*\# NaiveBayes NaiveBayes2
