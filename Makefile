@@ -7,10 +7,13 @@
 CXX= g++
 CXXFLAGS= -std=c++11 -Wall -pedantic -g
 
-all: clean NaiveBayes
+all: clean NaiveBayes NaiveBayes2
 
 NaiveBayes: naive.cpp naive.h
 	$(CXX) $(CXXFLAGS) naive.cpp -o NaiveBayes -w
+
+NaiveBayes2: matchingnaive.cpp naive.h
+	$(CXX) $(CXXFLAGS) matchingnaive.cpp -o NaiveBayes2 -w
 
 .PHONY: clean
 

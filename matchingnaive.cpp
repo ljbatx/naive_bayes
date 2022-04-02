@@ -121,8 +121,8 @@ void Predict(Classify& Dataset, std::istringstream& iss, std::string tru_label, 
   /*
      THIS SECTION CHECKS THE TESTING DATA FOR ZERO INSTANCES
      IT IS COMMENTED OUT IN matchingnaive.cpp
-   */
-  
+   */   /*
+    
   if(likelihood_pos != 0 && likelihood_neg != 0)
   {
     if(Pos.GetMaxAttributes() > attributes_accounted_for.size())
