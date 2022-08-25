@@ -1,8 +1,5 @@
 ReadMe.txt
 
-Laura Battle
-Advanced Data Mining - Homework 3 - Spring 2022
-
 
 *************************************************
 COMPILE
