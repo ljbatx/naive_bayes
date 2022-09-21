@@ -1,9 +1,5 @@
 /*
 naive.cpp
-
-Laura Battle
-Advanced Data Mining - HW 3 - Spring 2022
-Naive Bayes Classifier
 */
 
 #include <fstream>
