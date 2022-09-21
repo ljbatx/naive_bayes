@@ -1,8 +1,5 @@
 #Makefile
-#
-#Laura Battle
-#Advanced Data Mining - HW 3 Spring 2022
-#Naive Bayes Classifier
+
 
 CXX= g++
 CXXFLAGS= -std=c++11 -Wall -pedantic -g
